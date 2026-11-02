@@ -1,0 +1,126 @@
+// Psifas — classroom archive & memories.
+// The connection URL lives in prisma.config.ts (Prisma 7 style), read from DATABASE_URL.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Global (system-wide) role. Class-level roles live on ClassMember.
+enum GlobalRole {
+  User
+  SystemAdmin
+}
+
+/// Role of a user inside one specific class.
+enum ClassRole {
+  Member
+  ClassManager
+}
+
+enum PostType {
+  quote
+  image
+}
+
+enum ReactionType {
+  like
+  love
+  laugh
+  adore
+  touched
+  wow
+  applause
+  fire
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  name           String     @db.VarChar(100)
+  /// Always stored trimmed + lower-cased.
+  email          String     @unique @db.VarChar(254)
+  passwordHash   String
+  role           GlobalRole @default(User)
+  /// Bumped on password change — invalidates every session token issued before it.
+  sessionVersion Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  memberships ClassMember[]
+  posts       Post[]
+  reactions   Reaction[]
+
+  @@index([createdAt])
+  @@index([name])
+}
+
+model Class {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(100)
+  inviteCode String   @unique @db.VarChar(16)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members ClassMember[]
+  posts   Post[]
+
+  @@index([createdAt])
+  @@index([name])
+}
+
+/// Membership of a user in a class. The composite primary key prevents duplicate memberships.
+model ClassMember {
+  userId   Int
+  classId  Int
+  role     ClassRole @default(Member)
+  joinedAt DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([userId, classId])
+  @@index([classId, role])
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  classId   Int
+  /// Null once the author's account has been deleted — the memory stays, anonymised.
+  authorId  Int?
+  type      PostType
+  title     String   @db.VarChar(150)
+  content   String?  @db.VarChar(2000)
+  /// Storage key of the image (never a public URL — URLs are signed per response).
+  imageKey  String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class     Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
+  author    User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  reactions Reaction[]
+
+  @@index([classId, createdAt])
+  @@index([classId, type])
+  @@index([authorId])
+}
+
+/// One reaction per user per post (switching type updates the row).
+model Reaction {
+  postId    Int
+  userId    Int
+  type      ReactionType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([postId, type])
+  @@index([userId])
+}
