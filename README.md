@@ -67,7 +67,7 @@ PostgreSQL דרך Prisma — הסכמה: [`prisma/schema.prisma`](prisma/schema.
 
 ## התקנה והרצה
 
-**דרישות:** Node.js 20.19 ומעלה. אין צורך להתקין PostgreSQL לפיתוח.
+**דרישות מערכת:** Node.js 20.19 ומעלה. אין צורך להתקין PostgreSQL לפיתוח.
 
 ```bash
 npm install                      # מתקין ומייצר את Prisma Client
@@ -151,7 +151,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 ## תמונות
 
-JPG, PNG ו־WebP עד 5MB; הסוג נבדק לפי תוכן הקובץ (Magic Bytes); שמות קבצים אקראיים; הגשה דרך קישורים חתומים עם תוקף; מחיקת הקבצים עם מחיקת הפרסום או הכיתה.
+JPG, PNG ו־WebP עד 5MB; הסוג נבדק לפי תוכן הקובץ (Magic Bytes); שמות קבצים אקראיים; הצגת התמונות דרך קישורים חתומים עם תוקף; מחיקת הקבצים עם מחיקת הפרסום או הכיתה.
 
 שכבת האחסון מופרדת ב־[`src/storage/`](src/storage/) מאחורי הממשק `StorageService`. המימוש הקיים כותב לדיסק המקומי ומיועד **לפיתוח בלבד** — לפני פרסום בענן יש להוסיף מימוש לשירות אחסון קבוע (S3, Cloudflare R2, Supabase Storage).
 
