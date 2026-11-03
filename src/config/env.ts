@@ -23,7 +23,13 @@ const envSchema = z.object({
 
     /** Public base URL of this API, used to build signed image URLs. */
     API_PUBLIC_URL: z.string().url().optional(),
-    STORAGE_DRIVER: z.enum(["local"]).default("local"),
+    /** "local" = server disk (development only); "cloudinary" = permanent storage for production. */
+    STORAGE_DRIVER: z.enum(["local", "cloudinary"]).default("local"),
+    /** cloudinary://<api_key>:<api_secret>@<cloud_name> — required when STORAGE_DRIVER=cloudinary. */
+    CLOUDINARY_URL: z
+        .string()
+        .regex(/^cloudinary:\/\/[^:@/\s]+:[^@/\s]+@[^/\s?]+\/?$/, "CLOUDINARY_URL must look like cloudinary://<api_key>:<api_secret>@<cloud_name>")
+        .optional(),
     UPLOADS_DIR: z.string().default("uploads"),
     /** Secret for signing media URLs. Falls back to a key derived from JWT_SECRET. */
     MEDIA_URL_SECRET: z.string().min(32).optional(),
@@ -48,6 +54,10 @@ if (!parsed.success) {
 const raw = parsed.data;
 const isProduction = raw.NODE_ENV === "production";
 const cookieSecure = raw.COOKIE_SECURE ?? isProduction;
+
+if (raw.STORAGE_DRIVER === "cloudinary" && !raw.CLOUDINARY_URL) {
+    throw new Error("STORAGE_DRIVER=cloudinary requires CLOUDINARY_URL");
+}
 
 if (raw.COOKIE_SAMESITE === "none" && !cookieSecure) {
     throw new Error("COOKIE_SAMESITE=none requires COOKIE_SECURE=true");
@@ -75,6 +85,7 @@ export const env = {
     storage: {
         driver: raw.STORAGE_DRIVER,
         uploadsDir: path.resolve(raw.UPLOADS_DIR),
+        cloudinaryUrl: raw.CLOUDINARY_URL,
     },
     mediaUrlSecret: raw.MEDIA_URL_SECRET,
     authRateLimitMax: raw.AUTH_RATE_LIMIT_MAX,

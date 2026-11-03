@@ -1,9 +1,13 @@
 import { env } from "../config/env.js";
+import { CloudinaryStorage } from "./cloudinaryStorage.js";
 import { LocalDiskStorage } from "./localDiskStorage.js";
 import type { StorageService } from "./storage.types.js";
 
 function createStorage(): StorageService {
     switch (env.storage.driver) {
+        case "cloudinary":
+            // env.ts guarantees CLOUDINARY_URL is present and well-formed for this driver.
+            return new CloudinaryStorage(env.storage.cloudinaryUrl!);
         case "local":
             if (env.isProduction) {
                 console.warn(

@@ -138,7 +138,9 @@ npm test
 | `SESSION_TTL_DAYS` | | משך ה־Session (ברירת מחדל: 7 ימים) |
 | `COOKIE_SECURE`, `COOKIE_SAMESITE` | | הגדרות ה־Cookie |
 | `TRUST_PROXY` | | מספר ה־Proxies (בדרך כלל `1` בענן) |
-| `STORAGE_DRIVER`, `UPLOADS_DIR`, `MEDIA_URL_SECRET` | | אחסון תמונות וחתימת קישורים |
+| `STORAGE_DRIVER` | | `local` (פיתוח, דיסק השרת) או `cloudinary` (פרודקשן) |
+| `CLOUDINARY_URL` | עם `cloudinary` | `cloudinary://<api_key>:<api_secret>@<cloud_name>` |
+| `UPLOADS_DIR`, `MEDIA_URL_SECRET` | | אחסון מקומי וחתימת קישורים (פיתוח) |
 | `AUTH_RATE_LIMIT_MAX` | | מגבלת ניסיונות התחברות ל־IP |
 | `TEST_DATABASE_URL` | לבדיקות | מסד נתונים נפרד לבדיקות |
 
@@ -163,12 +165,20 @@ Hash של argon2id לסיסמאות · JWT ב־Cookie מסוג HttpOnly עם `Se
 
 ---
 
-## פריסה לענן (טרם בוצעה)
+## פריסה לענן
 
-1. PostgreSQL מנוהל (Neon / Supabase / Render) → `DATABASE_URL`.
-2. Build: `npm ci && npm run build` · Start: `npm start` · בכל פריסה: `npm run migrate:deploy`.
-3. משתנים: `NODE_ENV=production`, `JWT_SECRET`, `DATABASE_URL`, `CLIENT_ORIGINS`, `API_PUBLIC_URL`, `TRUST_PROXY=1`.
-4. בדיקת תקינות: `GET /health`.
-5. אם הקליינט והשרת על אתרים שונים: `COOKIE_SAMESITE=none` (מחייב HTTPS); עדיף דומיין משותף.
+הפריסה מוגדרת כ־**Render Blueprint** בקובץ [`render.yaml`](render.yaml), במסלולים חינמיים בלבד:
+
+| רכיב | שירות | כתובת |
+|---|---|---|
+| הקליינט | Render Static Site | `https://psifas.onrender.com` |
+| השרת | Render Web Service (Frankfurt) | `https://psifas-api.onrender.com` |
+| מסד הנתונים | Neon PostgreSQL (Frankfurt) | — |
+| תמונות | Cloudinary | — |
+
+- האתר מעביר את `/api/*` לשרת, כך שהדפדפן רואה אתר אחד: ה־Cookie הוא של אותו אתר ואין צורך ב־CORS בין אתרים.
+- `JWT_SECRET` נוצר על ידי Render. את `DATABASE_URL` ואת `CLOUDINARY_URL` מזינים פעם אחת בטופס של Render (`sync: false`) — הם לא נשמרים בקוד.
+- כל פריסה מריצה `npm run migrate:deploy`. בדיקת תקינות: `GET /health`.
+- תמונות נשמרות ב־Cloudinary כקבצים פרטיים (`authenticated`) ומוצגות דרך קישורים חתומים בלבד.
 
 </div>
