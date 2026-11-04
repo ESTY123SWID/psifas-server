@@ -11,7 +11,7 @@ if (!new URL(env.databaseUrl).pathname.includes("test")) {
 
 beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-        'TRUNCATE TABLE "Reaction", "Post", "ClassMember", "Class", "User" RESTART IDENTITY CASCADE'
+        'TRUNCATE TABLE "Reaction", "Post", "ClassMember", "Class", "User", "PendingImageDeletion" RESTART IDENTITY CASCADE'
     );
     await fs.rm(env.storage.uploadsDir, { recursive: true, force: true });
 });

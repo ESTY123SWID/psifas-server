@@ -74,11 +74,19 @@ export class CloudinaryStorage implements StorageService {
 
     async delete(key: string): Promise<void> {
         const { publicId } = splitKey(key);
-        const result = (await cloudinary.uploader.destroy(publicId, {
-            type: "authenticated",
-            resource_type: "image",
-            invalidate: true,
-        })) as { result?: string };
+        let result: { result?: string };
+        try {
+            result = (await cloudinary.uploader.destroy(publicId, {
+                type: "authenticated",
+                resource_type: "image",
+                invalidate: true,
+            })) as { result?: string };
+        } catch (error) {
+            // The SDK rejects with plain objects ({ error } or { message, http_code }) — turn them into a readable Error.
+            const cause = (error as { error?: unknown })?.error ?? error;
+            const message = cause instanceof Error ? cause.message : (cause as { message?: string })?.message ?? String(cause);
+            throw new Error(`Cloudinary delete failed: ${message}`);
+        }
         // "not found" means it is already gone — that is fine for a delete.
         if (result.result !== "ok" && result.result !== "not found") {
             throw new Error(`Cloudinary delete failed: ${result.result ?? "unknown error"}`);

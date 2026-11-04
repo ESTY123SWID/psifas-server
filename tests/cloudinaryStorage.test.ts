@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import cloudinaryPackage from "cloudinary";
+import { describe, expect, it, vi } from "vitest";
 
 import { CloudinaryStorage, parseCloudinaryUrl } from "../src/storage/cloudinaryStorage.js";
 
-// Fake, offline credentials — no request is sent by anything tested here.
+const { v2: cloudinary } = cloudinaryPackage;
+
+// Fake, offline credentials — no request is sent by anything tested here (network calls are mocked).
 const FAKE_URL = "cloudinary://123456789012345:fake-secret-for-tests@demo-cloud";
 const KEY = "psifas/classes/12/0b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d.jpg";
 
@@ -34,5 +37,29 @@ describe("Cloudinary storage driver (offline)", () => {
             expect(() => storage.getReadUrl(key)).toThrow("Invalid storage key");
             await expect(storage.delete(key)).rejects.toThrow("Invalid storage key");
         }
+    });
+
+    it("reports a failed delete as an error (so it is retried) and accepts an already-missing file", async () => {
+        const storage = new CloudinaryStorage(FAKE_URL);
+        const destroy = vi.spyOn(cloudinary.uploader, "destroy");
+
+        // The SDK rejects with a plain object on network errors.
+        destroy.mockRejectedValueOnce({ error: Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }) });
+        await expect(storage.delete(KEY)).rejects.toThrow("Cloudinary delete failed: read ECONNRESET");
+
+        destroy.mockResolvedValueOnce({ result: "error" });
+        await expect(storage.delete(KEY)).rejects.toThrow("Cloudinary delete failed: error");
+
+        destroy.mockResolvedValueOnce({ result: "not found" });
+        await expect(storage.delete(KEY)).resolves.toBeUndefined();
+
+        destroy.mockResolvedValueOnce({ result: "ok" });
+        await expect(storage.delete(KEY)).resolves.toBeUndefined();
+        expect(destroy).toHaveBeenLastCalledWith("psifas/classes/12/0b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d", {
+            type: "authenticated",
+            resource_type: "image",
+            invalidate: true,
+        });
+        destroy.mockRestore();
     });
 });

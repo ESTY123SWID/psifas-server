@@ -124,3 +124,13 @@ model Reaction {
   @@index([postId, type])
   @@index([userId])
 }
+
+/// Stored image files that must be deleted from storage. A row is removed only after the storage
+/// confirms the deletion, so a temporary storage/network failure is retried instead of leaving a file behind.
+model PendingImageDeletion {
+  key       String   @id @db.VarChar(255)
+  attempts  Int      @default(0)
+  lastError String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
